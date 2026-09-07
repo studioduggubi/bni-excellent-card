@@ -126,44 +126,25 @@ h1 em{font-style:normal;color:var(--gold)}
 
 <script>
 /* ══════════════════════════════════════════════════════════════
-   앱 주소는 이 파일이 아니라 옆에 있는 app.json 에 적혀 있습니다.
-   배포 주소가 바뀌면 app.json 한 줄만 고치면 됩니다.
+   입력 화면은 같은 도메인의 app.html 이 맡는다.
+   app.html 안에서 실제 앱을 프레임으로 띄운다.
 
    왜 이렇게 했나 :
-   이 페이지(index.html)는 브라우저가 캐시로 붙잡아 둡니다.
-   주소를 여기에 박아두면, 캐시된 사람은 계속 옛 앱으로 들어갑니다.
-   그래서 주소만 따로 빼서 매번 새로 읽어옵니다.
+   1) 멤버가 보는 주소가 끝까지 studioduggubi.github.io 로 남는다
+   2) 구글 안내 배너가 붙지 않는다
+   3) 사파리는 다른 도메인 프레임에 구글 쿠키를 안 보낸다
+      → 구글 계정이 여러 개여도 계정 문제가 끼어들지 않는다
 
-   아래 값은 app.json 을 못 읽었을 때 쓰는 예비용입니다.
+   실제 앱 주소는 app.json 에만 적혀 있다. 재배포해도 이 파일은 손댈 일이 없다.
    ══════════════════════════════════════════════════════════════ */
-var APP_URL = "https://script.google.com/macros/s/AKfycby-4xhWZcwbGUBOmlTlhc-7hmmjO0wXDu8pixZecKshdcr6sOasTKpFBfxwnJmpIFZO2g/exec?authuser=0";
-/* ══════════════════════════════════════════════════════════════ */
+var APP_PAGE = "app.html";
 
 (function(){
   var go = document.getElementById('go');
-  var url = (APP_URL || '').trim();
-
-  if (!url) {
-    go.className = 'cta off'; go.textContent = '준비 중입니다'; go.removeAttribute('href');
-    return;
-  }
-  go.href = url;
-
-  /* 항상 최신 주소를 읽어온다. 실패하면 위의 예비용 주소를 그대로 쓴다. */
-  try {
-    fetch('app.json?t=' + Date.now(), { cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) {
-        if (j && typeof j.url === 'string' && j.url.indexOf('http') === 0) {
-          url = j.url;
-          go.href = url;
-        }
-      })
-      .catch(function () {});
-  } catch (e) {}
+  go.href = APP_PAGE;
 
   /* 카카오톡·인스타 등 앱 안에 들어 있는 브라우저에서는
-     구글 Apps Script 화면이 열리지 않는다. 기본 브라우저로 넘겨준다. */
+     구글 화면이 제대로 열리지 않는다. 기본 브라우저로 넘겨준다. */
   var ua    = navigator.userAgent || '';
   var kakao = /KAKAOTALK/i.test(ua);
   var inApp = kakao || /Instagram|FBAN|FBAV|Line\/|NAVER|DaumApps|everytimeApp/i.test(ua);
@@ -175,7 +156,8 @@ var APP_URL = "https://script.google.com/macros/s/AKfycby-4xhWZcwbGUBOmlTlhc-7hm
   if (kakao) {
     go.addEventListener('click', function (e) {
       e.preventDefault();
-      location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url);
+      var abs = location.href.replace(/[^\/?#]*(?:[?#].*)?$/, '') + APP_PAGE;
+      location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(abs);
     });
   }
 })();
