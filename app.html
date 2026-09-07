@@ -82,7 +82,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun 
    구글이 회사 도메인 주소로 한 번 더 넘기느라 오래 걸릴 수 있어서,
    흰 화면을 그대로 보여주지 않는 것이 중요하다.
    ══════════════════════════════════════════════════════════════ */
-var APP_URL = "https://script.google.com/macros/s/AKfycbx5ZnTQDnJ8Goi5Bh1t9OSRpESxbbn6A02L0qCu-FSjWuC-YJ7UuqB3PfKsMmNjOpNpaQ/exec";
+var APP_URL = "https://script.google.com/macros/s/AKfycbxQVobd1XJn7KH2V-2neBIzxWVhNWlQZJFBpEJl6gXe2txNoQBoUJHv0V0kD4Di3Kr9iA/exec";
 
 (function () {
   var f      = document.getElementById("app");
@@ -104,17 +104,14 @@ var APP_URL = "https://script.google.com/macros/s/AKfycbx5ZnTQDnJ8Goi5Bh1t9OSRpE
     if (e.data === "bni-ready") reveal();
   });
 
-  /* 알림이 없어도 화면이 뜬 뒤 잠깐 있다가 걷는다 */
-  f.addEventListener("load", function () {
-    var wait = Math.max(0, 900 - (Date.now() - t0));
-    setTimeout(reveal, wait + 400);
-  });
+  /* 신호가 끝내 안 오면(옛 버전이 캐시된 경우) 15초 뒤에 그냥 걷는다 */
+  setTimeout(reveal, 15000);
 
   function go(url) {
     direct.href = url;
     f.src = url;
     /* 20초가 지나도 아무 것도 없으면 바로 열기 버튼을 준다 */
-    setTimeout(function () { if (!shown) { reveal(); fb.className = "on"; } }, 20000);
+    setTimeout(function () { if (!shown) { reveal(); fb.className = "on"; } }, 25000);
   }
 
   var url = APP_URL;
