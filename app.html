@@ -6,24 +6,59 @@
 <title>이미지 명함 정보 입력 · BNI 엑설런트</title>
 <meta name="robots" content="noindex">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden;background:#f4f4f6}
-body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+body{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif}
 #app{display:block;width:100%;height:100vh;height:100dvh;border:0}
-#fallback{display:none;position:fixed;inset:0;z-index:2;background:#031341;color:#fff;
-  align-items:center;justify-content:center;padding:32px 24px calc(32px + env(safe-area-inset-bottom));text-align:center}
+
+/* 불러오는 동안 보이는 화면 — 흰 화면을 그대로 보여주지 않기 위해서 */
+#loading{
+  position:fixed;inset:0;z-index:1;background:#f4f4f6;
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity .25s ease;
+}
+#loading.off{opacity:0;pointer-events:none}
+#loading .in{text-align:center}
+#loading .dot{
+  width:34px;height:34px;margin:0 auto;border-radius:50%;
+  border:3px solid #dcdce4;border-top-color:#2a2a4a;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{margin-top:18px;font-size:14px;letter-spacing:-.3px;color:#8a8a99}
+
+/* 프레임이 끝내 안 뜰 때만 보이는 대비책 */
+#fallback{
+  display:none;position:fixed;inset:0;z-index:2;
+  background:#031341;color:#fff;
+  align-items:center;justify-content:center;
+  padding:32px 24px calc(32px + env(safe-area-inset-bottom));
+  text-align:center;
+}
 #fallback.on{display:flex}
 #fallback .in{max-width:380px}
 #fallback h1{font-size:20px;font-weight:700;letter-spacing:-.6px;line-height:1.45}
-#fallback p{margin-top:14px;font-size:14px;letter-spacing:-.3px;line-height:1.7;color:rgba(255,255,255,.68)}
-#fallback a{display:block;margin-top:26px;padding:17px 20px;background:#fff;color:#031341;
-  border-radius:13px;font-size:16px;font-weight:700;letter-spacing:-.4px;text-decoration:none}
+#fallback p{margin-top:14px;font-size:14px;font-weight:400;letter-spacing:-.3px;line-height:1.7;color:rgba(255,255,255,.68)}
+#fallback a{
+  display:block;margin-top:26px;padding:17px 20px;
+  background:#fff;color:#031341;border-radius:13px;
+  font-size:16px;font-weight:700;letter-spacing:-.4px;text-decoration:none;
+}
 </style>
 </head>
 <body>
 
 <iframe id="app" title="이미지 명함 정보 입력" allow="camera;clipboard-write"></iframe>
+
+<div id="loading">
+  <div class="in">
+    <div class="dot"></div>
+    <p>불러오는 중입니다</p>
+  </div>
+</div>
 
 <div id="fallback">
   <div class="in">
@@ -32,28 +67,54 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun 
     <a id="direct" href="#" target="_blank" rel="noopener">입력 화면 바로 열기</a>
   </div>
 </div>
-
 <script>
-/* 앱을 이 페이지 안에 끼워 넣는다.
+/* ══════════════════════════════════════════════════════════════
+   앱을 이 페이지 안에 끼워 넣는다.
+
+   왜 :
    1) 멤버가 보는 주소가 끝까지 studioduggubi.github.io 로 남는다
-   2) 구글 안내 배너가 붙지 않는다
-   3) 사파리는 다른 도메인 프레임에 구글 쿠키를 안 보낸다
-      → 구글 계정이 여러 개여도 계정 문제가 끼어들지 않는다
-   앱 주소는 옆의 app.json 에서 매번 새로 읽는다. 아래 값은 예비용. */
+   2) 주소가 74자짜리 구글 주소로 바뀌지 않는다
+   3) 앱을 새로 배포해도 카톡으로 뿌린 주소는 그대로다
+      (바꿀 곳은 옆의 app.json 한 줄뿐)
+
+   불러오는 동안은 로딩 화면을 덮어 둔다.
+   구글 워크스페이스 계정으로 로그인된 사람은 처음 한 번
+   구글이 회사 도메인 주소로 한 번 더 넘기느라 오래 걸릴 수 있어서,
+   흰 화면을 그대로 보여주지 않는 것이 중요하다.
+   ══════════════════════════════════════════════════════════════ */
 var APP_URL = "https://script.google.com/macros/s/AKfycbx5ZnTQDnJ8Goi5Bh1t9OSRpESxbbn6A02L0qCu-FSjWuC-YJ7UuqB3PfKsMmNjOpNpaQ/exec";
 
 (function () {
-  var f = document.getElementById("app");
-  var fb = document.getElementById("fallback");
+  var f      = document.getElementById("app");
+  var load   = document.getElementById("loading");
+  var fb     = document.getElementById("fallback");
   var direct = document.getElementById("direct");
-  var loaded = false;
+  var t0     = Date.now();
+  var shown  = false;
 
-  f.addEventListener("load", function () { loaded = true; });
+  function reveal() {
+    if (shown) return;
+    shown = true;
+    load.className = "off";
+  }
+
+  /* 앱 쪽에서 "다 그렸다"고 알려주면 그게 가장 정확하다.
+     (앱에 parent.postMessage("bni-ready","*") 한 줄이 들어가면 동작한다) */
+  window.addEventListener("message", function (e) {
+    if (e.data === "bni-ready") reveal();
+  });
+
+  /* 알림이 없어도 화면이 뜬 뒤 잠깐 있다가 걷는다 */
+  f.addEventListener("load", function () {
+    var wait = Math.max(0, 900 - (Date.now() - t0));
+    setTimeout(reveal, wait + 400);
+  });
 
   function go(url) {
     direct.href = url;
     f.src = url;
-    setTimeout(function () { if (!loaded) fb.className = "on"; }, 8000);
+    /* 20초가 지나도 아무 것도 없으면 바로 열기 버튼을 준다 */
+    setTimeout(function () { if (!shown) { reveal(); fb.className = "on"; } }, 20000);
   }
 
   var url = APP_URL;
